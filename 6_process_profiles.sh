@@ -1,1 +1,0 @@
-python3 process_profiles.py profiles.json > ticker_sectors.json
