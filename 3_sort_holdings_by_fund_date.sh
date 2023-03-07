@@ -1,1 +1,1 @@
-cat eom_holdings.csv | (sed -u 1q; sort) > eom_holdings.csv
+cat holdings.csv | (sed -u 1q; sort) > holdings.csv

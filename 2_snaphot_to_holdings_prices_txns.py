@@ -1,7 +1,7 @@
 import json,datetime
 
 
-g_last_eom_date = datetime.date(2023,1,31)
+g_last_eoq_date = datetime.date(2022,12,31)
 
 
 def get_prev_eom(d):
@@ -13,9 +13,9 @@ account_first_txn_date_map = {} # [account_id]->d
 
 with open("snapshot.json") as f:
     data = json.load(f)
-    with open('eom_holdings.csv', 'w') as f_eom_holdings, open('txns.csv', 'w') as f_txns:
+    with open('holdings.csv', 'w') as f_holdings, open('txns.csv', 'w') as f_txns:
         
-        f_eom_holdings.write('account_id,d,ticker,qty\n')
+        f_holdings.write('account_id,d,ticker,qty\n')
         f_txns.write('ts,account_id,ticker,qty,price\n')
 
         for account_id, account_data in data.items():
@@ -49,7 +49,7 @@ with open("snapshot.json") as f:
                     ticker_date_price_map[ticker] = {}
                 ticker_date_price_map[ticker][d] = price
 
-                if d > g_last_eom_date.isoformat():
+                if d > g_last_eoq_date.isoformat():
                      break
 
                 # Save txn
@@ -79,17 +79,18 @@ with open("snapshot.json") as f:
                 cur_date = datetime.date.fromisoformat(account_first_txn_date_map[account_id]).replace(day=1) + datetime.timedelta(days=-1)
                 cur_qty = 0
                 cur_price = None
-                while cur_date <= g_last_eom_date:
+                while cur_date <= g_last_eoq_date:
                     d = cur_date.isoformat()
-                    if cur_date < g_last_eom_date or cur_qty == 0:
+                    if cur_date < g_last_eoq_date or cur_qty == 0:
                         if d in date_txn_map:
                             cur_qty += date_txn_map[d]["qty"]
                             cur_price = date_txn_map[d]["price"]
-                        if (cur_date + datetime.timedelta(days=1)).month != cur_date.month:
+                        # If it's an eom and eoq - write to holdings
+                        if (cur_date + datetime.timedelta(days=1)).month != cur_date.month and cur_date.month % 3 == 0:
                             # Holdings record with cur_qty
-                            f_eom_holdings.write(f'{account_id},{d},{ticker},{cur_qty}\n')
+                            f_holdings.write(f'{account_id},{d},{ticker},{cur_qty}\n')
                     else:
-                        # Adjust g_last_eom_date holding by adding a synth txn
+                        # Adjust g_last_eoq_date holding by adding a synth txn
                         if d in date_txn_map:
                             # There was a txn on that last eom date, adjust its qty
                             date_txn_map[d]["qty"] -= cur_qty
@@ -103,7 +104,7 @@ with open("snapshot.json") as f:
                         ticker_date_price_map[ticker][d] = cur_price
 
                         # Holdings record with zero qty
-                        f_eom_holdings.write(f'{account_id},{d},{ticker},0\n')
+                        f_holdings.write(f'{account_id},{d},{ticker},0\n')
 
                     cur_date += datetime.timedelta(days=1)
 
